@@ -264,7 +264,7 @@ static void drawMenu() {
 
     glColor3f(0.55f, 0.55f, 0.65f);
     drawTextCentered(WORLD_W / 2, 40.0f,
-        "CSE 402 Computer Graphics & Image Processing Lab   |   Md Suheb Ahmed (231-115-322)", 12);
+        "CSE 402 Computer Graphics & Image Processing Lab   |   Suheb & Ferdus", 12);
 }
 
 static void drawCalibrate() {
