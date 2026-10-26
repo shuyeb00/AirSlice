@@ -6,3 +6,4 @@ obj/
 *.layout
 test_frame.jpg
 highscore.txt
+dist/
