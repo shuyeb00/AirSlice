@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include "Config.h"
 #include "Draw.h"
+#include "Game.h"
 
 // ---------- World and window ----------
 // The game always thinks in a fixed 1280 x 720 world,
@@ -24,6 +25,7 @@ float fpsTimer = 0.0f;
 
 // ---------- Game update (game logic goes here later) ----------
 void update(float dt) {
+    gameUpdate(dt);
     // Measure frames per second, refreshed every 0.5 s
     fpsFrames++;
     fpsTimer += dt;
@@ -40,6 +42,7 @@ void display() {
     glLoadIdentity();
 
     drawBackground();
+    gameDraw();
 
     // Temporary "blade": a dot that follows the mouse
     glColor3f(0.4f, 1.0f, 0.5f);
@@ -52,6 +55,8 @@ void display() {
     drawText(20, WORLD_H - 35, buf);
     std::snprintf(buf, sizeof(buf), "Mouse (world): %.0f, %.0f", mouseX, mouseY);
     drawText(20, WORLD_H - 60, buf);
+    std::snprintf(buf, sizeof(buf), "Fruits alive: %d", gameFruitCount());
+    drawText(20, WORLD_H - 85, buf);
 
     glutSwapBuffers();
 }
@@ -104,6 +109,7 @@ int main(int argc, char** argv) {
     glutPassiveMotionFunc(mouseMove);  // mouse moving, no button pressed
     glutMotionFunc(mouseMove);         // mouse moving with a button held
 
+    gameInit();
     lastTick = std::chrono::steady_clock::now();
     glutTimerFunc(16, timer, 0);
     glutMainLoop();
