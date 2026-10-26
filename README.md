@@ -7,6 +7,16 @@ Wave a brightly coloured object (a green pen, a strip of coloured paper on your 
 > CSE 402 · Computer Graphics & Image Processing Lab ·
 > Team: **Suheb & Ferdus**
 
+## Download and play
+
+**[⬇ Download AirSlice for Windows (v1.0)](https://github.com/shuyeb00/AirSlice/releases/download/v1.0/AirSlice-v1.0-Windows.zip)** (81 MB)
+
+1. Extract the zip.
+2. Double-click `AirSlice.exe`. No installation is needed.
+3. Press **M** to play with the mouse, or **W** to play with a webcam and a green object.
+
+If Windows shows *"Windows protected your PC"*, click **More info → Run anyway**. This appears because the app is not code-signed.
+
 ---
 
 ## Screenshots
