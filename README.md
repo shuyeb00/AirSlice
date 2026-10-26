@@ -4,7 +4,7 @@
 
 Wave a brightly coloured object (a green pen, a strip of coloured paper on your fingertip) in front of your webcam, and a glowing blade follows it across the screen. Slice the fruit, avoid the bombs, and chain cuts for combo bonuses. A mouse mode is included for testing and for poor lighting.
 
-> CSE 402 · Computer Graphics & Image Processing Lab · Metropolitan University, Sylhet
+> CSE 402 · Computer Graphics & Image Processing Lab ·
 > Team: **Suheb & Ferdus**
 
 ---
