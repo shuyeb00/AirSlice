@@ -10,6 +10,7 @@
 #include "Draw.h"
 #include "Game.h"
 #include "Vision.h"
+#include "Sound.h"
 
 // Windows gl.h only knows OpenGL 1.1; this constant is from OpenGL 1.2
 #ifndef GL_CLAMP_TO_EDGE
@@ -38,7 +39,7 @@ static bool  bladeActive = false;
 // Only the middle part of the camera image is mapped to the screen,
 // so the screen edges are easy to reach without leaving the camera's view
 constexpr float CAM_MARGIN   = 0.10f;
-constexpr float BLADE_FOLLOW = 25.0f;   // how fast the blade catches up with the camera target
+constexpr float BLADE_FOLLOW = 45.0f;   // how fast the blade catches up with the camera target
 
 // ---------- Options ----------
 static bool showDebug = false;          // D while playing
@@ -86,6 +87,8 @@ static void setState(State s) {
 
 static void startGame(InputMode mode) {
     inputMode = mode;
+    if (mode == InputMode::Webcam) gameSetSliceAssist(450.0f, 15.0f);   // easier for the camera
+    else                           gameSetSliceAssist(800.0f, 0.0f);
     gameReset();
     newHighScore = false;
     bladeActive = false;
@@ -245,15 +248,17 @@ static void drawMenu() {
     drawTextCentered(WORLD_W / 2, 330.0f, "[W]   Play with webcam", 24);
     drawTextCentered(WORLD_W / 2, 290.0f, "[M]   Play with mouse", 24);
     drawTextCentered(WORLD_W / 2, 250.0f, "[ESC]   Quit", 24);
+    glColor3f(0.75f, 0.75f, 0.85f);
+    drawTextCentered(WORLD_W / 2, 215.0f, soundEnabled() ? "[S]  Sound: ON" : "[S]  Sound: OFF", 18);
 
     char buf[64];
     std::snprintf(buf, sizeof(buf), "High score: %d", highScore);
     glColor3f(1.0f, 0.85f, 0.3f);
-    drawTextCentered(WORLD_W / 2, 185.0f, buf, 18);
+    drawTextCentered(WORLD_W / 2, 175.0f, buf, 18);
 
     if (cameraFailed) {
         glColor3f(1.0f, 0.4f, 0.4f);
-        drawTextCentered(WORLD_W / 2, 140.0f,
+        drawTextCentered(WORLD_W / 2, 135.0f,
             "Webcam could not be opened. Check camera privacy settings or close other apps using it.", 18);
     }
 
@@ -325,10 +330,10 @@ static void drawHud() {
 
     glColor3f(0.7f, 0.7f, 0.8f);
     if (inputMode == InputMode::Mouse) {
-        drawText(20.0f, 20.0f, "Input: mouse    P pause   D debug   ESC menu", 12);
+        drawText(20.0f, 20.0f, "Input: mouse    P pause   D debug   S sound   ESC menu", 12);
     } else {
         VisionStatus st = visionStatus();
-        std::snprintf(buf, sizeof(buf), "Input: webcam (%s)    P pause   D debug   V preview   ESC menu", st.colorName);
+        std::snprintf(buf, sizeof(buf), "Input: webcam (%s)    P pause   D debug   V preview   S sound   ESC menu", st.colorName);
         drawText(20.0f, 20.0f, buf, 12);
         if (!st.found) {
             glColor3f(1.0f, 0.4f, 0.4f);
@@ -471,6 +476,11 @@ static void keyboard(unsigned char rawKey, int, int) {
     unsigned char key = (unsigned char)std::tolower(rawKey);
     const unsigned char ESC = 27, ENTER = 13;
 
+    if (key == 's') {                      // sound on/off works on every screen
+        soundSetEnabled(!soundEnabled());
+        return;
+    }
+
     switch (state) {
     case State::Menu:
         if (key == ESC) std::exit(0);
@@ -533,6 +543,8 @@ int main(int argc, char** argv) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     }
 
+    soundInit();
+    std::atexit(soundShutdown);  // close the sound channels when the program exits
     std::atexit(visionStop);     // stop the camera thread cleanly when the program exits
     loadHighScore();
 

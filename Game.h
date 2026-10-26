@@ -15,3 +15,6 @@ int  gameLives();
 int  gameLevel();
 bool gameIsOver();
 int  gameObjectCount();
+
+// Webcam aim is less precise than a mouse: allow slower cuts and a slightly bigger hit area
+void gameSetSliceAssist(float minSliceSpeed, float extraHitRadius);

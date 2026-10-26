@@ -9,6 +9,7 @@
 #include "Config.h"
 #include "Draw.h"
 #include "Game.h"
+#include "Sound.h"
 
 // =====================================================================
 // Settings (tune the game here)
@@ -16,7 +17,6 @@
 constexpr float GRAVITY          = 900.0f;  // world units / s^2, pulls down
 constexpr float TRAIL_LIFE       = 0.15f;   // seconds a blade point stays visible
 constexpr int   TRAIL_MAX        = 24;      // max points kept in the trail
-constexpr float MIN_SLICE_SPEED  = 800.0f;  // blade must move this fast (units/s) to cut
 constexpr float COMBO_WINDOW     = 0.30f;   // seconds between cuts that still count as one swipe
 constexpr int   START_LIVES      = 3;
 constexpr int   POINTS_PER_FRUIT = 10;
@@ -85,6 +85,9 @@ static int   comboCount = 0;
 static float lastCutX = 0.0f, lastCutY = 0.0f;
 static float flashTimer = 0.0f;
 static float timeNow = 0.0f;              // seconds since the game started
+
+static float minSliceSpeed = 800.0f;     // blade must move this fast (units/s) to cut
+static float extraHitRadius = 0.0f;      // added to every fruit's radius in the hit test
 
 static bool  havePrev = false;            // blade position in the previous frame
 static float prevX = 0.0f, prevY = 0.0f;
@@ -237,6 +240,7 @@ static void cutFruit(const Obj& o, float dirX, float dirY) {
     score += POINTS_PER_FRUIT;
     addPopup(o.x, o.y + o.radius + 10.0f, "+10", {1.0f, 1.0f, 1.0f}, false, 0.7f);
 
+    soundPlay(Sfx::Slice);
     comboCount++;
     comboTimer = COMBO_WINDOW;
     lastCutX = o.x;
@@ -248,6 +252,7 @@ static void cutBomb(const Obj& o) {
           {1.0f, 0.55f, 0.1f}, true);
     burst(o.x, o.y, 0.0f, 0.0f, 15, 100.0f, 300.0f, 5.0f, 10.0f, 0.6f, 1.2f,
           {0.4f, 0.4f, 0.4f}, true);
+    soundPlay(Sfx::Bomb);
     lives--;
     flashTimer = FLASH_TIME;
     comboCount = 0;
@@ -274,6 +279,12 @@ void gameReset() {
     timeNow = 0.0f;
     havePrev = false;
     addPopup(WORLD_W / 2, WORLD_H * 0.55f, "GET READY", {1.0f, 1.0f, 1.0f}, true, 1.8f);
+    soundPlay(Sfx::Blip);
+}
+
+void gameSetSliceAssist(float minSpeed, float extraRadius) {
+    minSliceSpeed = minSpeed;
+    extraHitRadius = extraRadius;
 }
 
 void gameUpdate(float dt, float bx, float by, bool active) {
@@ -315,11 +326,11 @@ void gameUpdate(float dt, float bx, float by, bool active) {
         float dx = bx - prevX, dy = by - prevY;
         float len = std::sqrt(dx * dx + dy * dy);
         float speed = len / dt;
-        if (speed >= MIN_SLICE_SPEED && len > 1.0f) {
+        if (speed >= minSliceSpeed && len > 1.0f) {
             float dirX = dx / len, dirY = dy / len;
             for (size_t i = 0; i < objects.size();) {
                 const Obj& o = objects[i];
-                if (segmentHitsCircle(prevX, prevY, bx, by, o.x, o.y, o.radius)) {
+                if (segmentHitsCircle(prevX, prevY, bx, by, o.x, o.y, o.radius + extraHitRadius)) {
                     if (o.type == ObjType::Bomb) cutBomb(o);
                     else                         cutFruit(o, dirX, dirY);
                     objects.erase(objects.begin() + i);   // do not advance i
@@ -343,6 +354,7 @@ void gameUpdate(float dt, float bx, float by, bool active) {
                 char buf[48];
                 std::snprintf(buf, sizeof(buf), "COMBO x%d  +%d", comboCount, bonus);
                 addPopup(lastCutX, lastCutY + 60.0f, buf, {1.0f, 0.85f, 0.2f}, true, 1.3f);
+                soundPlay(Sfx::Combo);
             }
             comboCount = 0;
         }
@@ -355,6 +367,7 @@ void gameUpdate(float dt, float bx, float by, bool active) {
         char buf[24];
         std::snprintf(buf, sizeof(buf), "LEVEL %d", level);
         addPopup(WORLD_W / 2, WORLD_H * 0.62f, buf, {0.5f, 0.9f, 1.0f}, true, 1.5f);
+        soundPlay(Sfx::LevelUp);
     }
 
     // ---------- Objects that fell off the bottom ----------
@@ -365,6 +378,7 @@ void gameUpdate(float dt, float bx, float by, bool active) {
                 lives--;
                 float mx = std::max(60.0f, std::min(WORLD_W - 60.0f, o.x));
                 addPopup(mx, 40.0f, "MISS", {1.0f, 0.3f, 0.3f}, false, 1.0f);
+                soundPlay(Sfx::Miss);
             }
             objects.erase(objects.begin() + i);
         } else {
@@ -405,9 +419,10 @@ void gameUpdate(float dt, float bx, float by, bool active) {
 
     if (flashTimer > 0.0f) flashTimer -= dt;
 
-    if (lives <= 0) {
+    if (lives <= 0 && !over) {
         lives = 0;
         over = true;
+        soundPlay(Sfx::GameOver);
     }
 }
 
