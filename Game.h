@@ -1,20 +1,17 @@
 #pragma once
 
-enum class FruitType { Orange, Apple, Watermelon, Lemon };
+// Starts a new game: score 0, full lives, level 1, empty screen
+void gameReset();
 
-struct Fruit {
-    float x, y;        // position in world units
-    float vx, vy;      // velocity in world units per second
-    float angle;       // current rotation in degrees
-    float spin;        // rotation speed in degrees per second
-    float radius;
-    FruitType type;
-};
+// Advances the game by dt seconds.
+// bladeX, bladeY: blade position in world units.
+// bladeActive: false when the camera has lost the marker (no trail, no cutting).
+void gameUpdate(float dt, float bladeX, float bladeY, bool bladeActive);
 
-void gameInit();
-void gameUpdate(float dt);
 void gameDraw();
-int  gameFruitCount();
 
-// Tell the game where the blade (mouse or camera marker) is now
-void gameBladeMove(float x, float y);
+int  gameScore();
+int  gameLives();
+int  gameLevel();
+bool gameIsOver();
+int  gameObjectCount();
