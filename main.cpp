@@ -1,15 +1,14 @@
 #include <GL/glut.h>
 #include <chrono>
-#include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include "Config.h"
+#include "Draw.h"
 
 // ---------- World and window ----------
 // The game always thinks in a fixed 1280 x 720 world,
 // no matter how big the real window is.
-const float WORLD_W = 1280.0f;
-const float WORLD_H = 720.0f;
-const float PI = 3.14159265f;
+
 
 int winW = 1280, winH = 720;   // real window size in pixels (changes on resize)
 
@@ -22,32 +21,6 @@ float fps = 0.0f;
 int fpsFrames = 0;
 float fpsTimer = 0.0f;
 
-// ---------- Small drawing helpers ----------
-void drawText(float x, float y, const char* s) {
-    glRasterPos2f(x, y);
-    for (const char* c = s; *c; c++)
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
-}
-
-void drawCircle(float cx, float cy, float r, int segments = 32) {
-    glBegin(GL_TRIANGLE_FAN);
-    glVertex2f(cx, cy);                       // centre
-    for (int i = 0; i <= segments; i++) {     // points around the edge
-        float a = 2.0f * PI * i / segments;
-        glVertex2f(cx + r * std::cos(a), cy + r * std::sin(a));
-    }
-    glEnd();
-}
-
-void drawBackground() {
-    // Vertical gradient: dark navy at the bottom, dark purple at the top
-    glBegin(GL_QUADS);
-        glColor3f(0.05f, 0.06f, 0.12f); glVertex2f(0, 0);
-                                        glVertex2f(WORLD_W, 0);
-        glColor3f(0.16f, 0.10f, 0.24f); glVertex2f(WORLD_W, WORLD_H);
-                                        glVertex2f(0, WORLD_H);
-    glEnd();
-}
 
 // ---------- Game update (game logic goes here later) ----------
 void update(float dt) {
