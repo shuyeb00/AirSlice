@@ -15,3 +15,6 @@ void gameInit();
 void gameUpdate(float dt);
 void gameDraw();
 int  gameFruitCount();
+
+// Tell the game where the blade (mouse or camera marker) is now
+void gameBladeMove(float x, float y);

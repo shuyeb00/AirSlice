@@ -6,12 +6,10 @@
 #include "Draw.h"
 #include "Game.h"
 
-// ---------- World and window ----------
-// The game always thinks in a fixed 1280 x 720 world,
-// no matter how big the real window is.
-
-
-int winW = 1280, winH = 720;   // real window size in pixels (changes on resize)
+// ---------- Window and letterbox viewport ----------
+int winW = 1280, winH = 720;          // real window size in pixels
+int vpX = 0, vpY = 0;                 // where the 16:9 game area starts inside the window
+int vpW = 1280, vpH = 720;            // size of the 16:9 game area in pixels
 
 // ---------- Input ----------
 float mouseX = WORLD_W / 2, mouseY = WORLD_H / 2;   // mouse in WORLD coordinates
@@ -22,10 +20,11 @@ float fps = 0.0f;
 int fpsFrames = 0;
 float fpsTimer = 0.0f;
 
-
-// ---------- Game update (game logic goes here later) ----------
+// ---------- Game update ----------
 void update(float dt) {
+    gameBladeMove(mouseX, mouseY);   // the mouse is the blade for now
     gameUpdate(dt);
+
     // Measure frames per second, refreshed every 0.5 s
     fpsFrames++;
     fpsTimer += dt;
@@ -38,15 +37,15 @@ void update(float dt) {
 
 // ---------- Draw one frame ----------
 void display() {
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT);    // clears the whole window, so the bars become black
     glLoadIdentity();
 
     drawBackground();
     gameDraw();
 
-    // Temporary "blade": a dot that follows the mouse
-    glColor3f(0.4f, 1.0f, 0.5f);
-    drawCircle(mouseX, mouseY, 10.0f);
+    // Small dot showing the exact blade position
+    glColor3f(1.0f, 1.0f, 1.0f);
+    drawCircle(mouseX, mouseY, 4.0f);
 
     // HUD
     char buf[96];
@@ -75,19 +74,43 @@ void timer(int) {
 
 // ---------- Window-to-viewport: window pixels -> world coordinates ----------
 void mouseMove(int x, int y) {
-    // GLUT gives y from the TOP of the window; OpenGL world has y from the BOTTOM
-    mouseX = x * WORLD_W / winW;
-    mouseY = (winH - y) * WORLD_H / winH;
+    // GLUT gives y from the TOP of the window; OpenGL counts from the BOTTOM
+    float px = (float)(x - vpX);
+    float py = (float)((winH - y) - vpY);
+
+    mouseX = px * WORLD_W / vpW;
+    mouseY = py * WORLD_H / vpH;
+
+    // Keep the blade inside the world when the mouse is over the black bars
+    if (mouseX < 0) mouseX = 0;
+    if (mouseX > WORLD_W) mouseX = WORLD_W;
+    if (mouseY < 0) mouseY = 0;
+    if (mouseY > WORLD_H) mouseY = WORLD_H;
 }
 
+// Letterboxing: find the largest 16:9 area that fits in the window and centre it
 void reshape(int w, int h) {
     if (h == 0) h = 1;
     winW = w;
     winH = h;
-    glViewport(0, 0, w, h);
+
+    float target = WORLD_W / WORLD_H;           // 16:9
+    if ((float)w / h > target) {                // window too wide: bars left and right
+        vpH = h;
+        vpW = (int)(h * target);
+        vpX = (w - vpW) / 2;
+        vpY = 0;
+    } else {                                    // window too tall: bars top and bottom
+        vpW = w;
+        vpH = (int)(w / target);
+        vpX = 0;
+        vpY = (h - vpH) / 2;
+    }
+
+    glViewport(vpX, vpY, vpW, vpH);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluOrtho2D(0.0, WORLD_W, 0.0, WORLD_H);   // world is always 1280 x 720
+    gluOrtho2D(0.0, WORLD_W, 0.0, WORLD_H);     // world is always 1280 x 720
     glMatrixMode(GL_MODELVIEW);
 }
 
@@ -97,11 +120,16 @@ void keyboard(unsigned char key, int, int) {
 
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowSize(1280, 720);
     glutCreateWindow("AirSlice");
 
-    glutSetCursor(GLUT_CURSOR_NONE);   // hide the Windows cursor; our dot replaces it
+    glutSetCursor(GLUT_CURSOR_NONE);   // hide the Windows cursor
+
+    // Alpha blending: lets the blade trail be partly transparent
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);   // black letterbox bars
 
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);

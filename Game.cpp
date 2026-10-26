@@ -1,5 +1,6 @@
 #include <GL/glut.h>
 #include <vector>
+#include <deque>
 #include <random>
 #include <cmath>
 #include <algorithm>
@@ -8,12 +9,20 @@
 #include "Game.h"
 
 // ---------- Settings ----------
-constexpr float GRAVITY = 900.0f;   // world units per second^2, pulls down
+constexpr float GRAVITY    = 900.0f;  // world units per second^2, pulls down
+constexpr float TRAIL_LIFE = 0.15f;   // seconds a blade point stays visible
+constexpr int   TRAIL_MAX  = 24;      // max points kept in the trail
 
 // ---------- Game state ----------
+struct BladePoint {
+    float x, y;
+    float age;   // seconds since this point was added
+};
+
 static std::vector<Fruit> fruits;
-static float spawnTimer = 0.0f;     // seconds until the next wave
-static std::mt19937 rng;            // random number generator
+static std::deque<BladePoint> blade;  // oldest point at the front, newest at the back
+static float spawnTimer = 0.0f;       // seconds until the next wave
+static std::mt19937 rng;              // random number generator
 
 static float randf(float a, float b) {
     std::uniform_real_distribution<float> d(a, b);
@@ -52,7 +61,19 @@ static void spawnFruit() {
 void gameInit() {
     rng.seed(std::random_device{}());
     fruits.clear();
+    blade.clear();
     spawnTimer = 0.5f;
+}
+
+void gameBladeMove(float x, float y) {
+    // Ignore tiny movements so a still hand does not pile up points
+    if (!blade.empty()) {
+        float dx = x - blade.back().x;
+        float dy = y - blade.back().y;
+        if (dx * dx + dy * dy < 4.0f) return;   // moved less than 2 units
+    }
+    blade.push_back({x, y, 0.0f});
+    if ((int)blade.size() > TRAIL_MAX) blade.pop_front();
 }
 
 void gameUpdate(float dt) {
@@ -76,6 +97,10 @@ void gameUpdate(float dt) {
     fruits.erase(std::remove_if(fruits.begin(), fruits.end(),
                      [](const Fruit& f) { return f.y < -120.0f && f.vy < 0.0f; }),
                  fruits.end());
+
+    // Age the blade points and drop the ones that are too old
+    for (BladePoint& p : blade) p.age += dt;
+    while (!blade.empty() && blade.front().age > TRAIL_LIFE) blade.pop_front();
 }
 
 // ---------- Drawing ----------
@@ -133,6 +158,42 @@ static void drawFruitShape(const Fruit& f) {
     }
 }
 
+// Blade trail: a ribbon through the recent points, wide and bright at the head,
+// thin and transparent at the tail (uses alpha blending)
+static void drawBlade() {
+    int n = (int)blade.size();
+    if (n < 2) return;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i < n; i++) {
+        const BladePoint& p = blade[i];
+
+        // Direction of travel at this point, from its neighbours
+        int a = (i == 0) ? 0 : i - 1;
+        int b = (i == n - 1) ? n - 1 : i + 1;
+        float dx = blade[b].x - blade[a].x;
+        float dy = blade[b].y - blade[a].y;
+        float len = std::sqrt(dx * dx + dy * dy);
+        if (len < 0.001f) len = 0.001f;
+
+        // Perpendicular (normal) to the direction: rotate (dx, dy) by 90 degrees
+        float nx = -dy / len;
+        float ny =  dx / len;
+
+        float k = (float)i / (n - 1);              // 0 at the tail, 1 at the head
+        float fade = 1.0f - p.age / TRAIL_LIFE;    // 1 when new, 0 when about to vanish
+        if (fade < 0.0f) fade = 0.0f;
+
+        float halfWidth = 1.0f + 9.0f * k * fade;
+        float alpha = k * fade;
+
+        glColor4f(0.75f, 0.95f, 1.0f, alpha);
+        glVertex2f(p.x + nx * halfWidth, p.y + ny * halfWidth);
+        glVertex2f(p.x - nx * halfWidth, p.y - ny * halfWidth);
+    }
+    glEnd();
+}
+
 void gameDraw() {
     for (const Fruit& f : fruits) {
         glPushMatrix();
@@ -141,6 +202,7 @@ void gameDraw() {
         drawFruitShape(f);                    // 3. draw it at (0,0)
         glPopMatrix();
     }
+    drawBlade();   // blade on top of the fruits
 }
 
 int gameFruitCount() {
